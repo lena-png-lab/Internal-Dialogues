@@ -1,0 +1,256 @@
+cd "C:\Users\Leonor Araujo\internal-dialogues"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { db, auth } from "@/lib/firebase";
+import {
+  doc,
+  setDoc,
+  getDocs,
+  getDoc,
+  collection,
+  query,
+  where,
+} from "firebase/firestore";
+import { onAuthStateChanged, signInAnonymously } from "firebase/auth";
+
+const tabs = [
+  "Home",
+  "Vent to the Void",
+  "Midnight Thoughts",
+  "Internal Dialogues",
+  "Advice",
+  "Profile",
+];
+
+export default function InternalDialogues() {
+  const [activeTab, setActiveTab] = useState("Home");
+  const [user, setUser] = useState(null);
+  const [ventText, setVentText] = useState("");
+  const [midnightText, setMidnightText] = useState("");
+  const [entries, setEntries] = useState([]);
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Profile states
+  const [avatar, setAvatar] = useState("");
+  const [banner, setBanner] = useState("");
+  const [loveStyle, setLoveStyle] = useState("");
+  const [likes, setLikes] = useState("");
+  const [dislikes, setDislikes] = useState("");
+  const [spotify, setSpotify] = useState("");
+
+  // Auth + load entries and profile
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUser(user);
+        loadUserEntries(user.uid);
+        loadProfile(user.uid);
+      } else {
+        signInAnonymously(auth);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  async function loadUserEntries(uid) {
+    const q = query(collection(db, "entries"), where("uid", "==", uid));
+    const querySnapshot = await getDocs(q);
+    const data = querySnapshot.docs.map((doc) => doc.data());
+    setEntries(data);
+  }
+
+  async function loadProfile(uid) {
+    const profileRef = doc(db, "profiles", uid);
+    const profileSnap = await getDoc(profileRef);
+    if (profileSnap.exists()) {
+      const data = profileSnap.data();
+      setAvatar(data.avatar || "");
+      setBanner(data.banner || "");
+      setLoveStyle(data.loveStyle || "");
+      setLikes(data.likes || "");
+      setDislikes(data.dislikes || "");
+      setSpotify(data.spotify || "");
+    }
+  }
+
+  async function saveProfile() {
+    if (!user) return;
+    const profileRef = doc(db, "profiles", user.uid);
+    await setDoc(profileRef, {
+      avatar,
+      banner,
+      loveStyle,
+      likes,
+      dislikes,
+      spotify,
+    });
+    alert("Perfil guardado com sucesso!");
+  }
+
+  async function handleSubmit(text, type) {
+    if (!user) return;
+    const entry = {
+      uid: user.uid,
+      type,
+      text,
+      timestamp: Date.now(),
+    };
+    await setDoc(doc(collection(db, "entries")), entry);
+    setVentText("");
+    setMidnightText("");
+    loadUserEntries(user.uid);
+  }
+
+  const theme = darkMode
+    ? "bg-[#1a1a1a] text-[#f4edea]"
+    : "bg-gradient-to-br from-rosaPastel to-brancoFloral text-pretoSuave";
+
+  return (
+    <div
+      className={`min-h-screen ${theme} font-serif transition-colors duration-500`}
+    >
+      <header className="p-4 bg-white/70 shadow-md flex justify-between items-center border-b border-lavandaMorta dark:bg-black/60">
+        <h1 className="text-3xl font-titulo italic text-cinzaNeblina dark:text-rosaPastel select-none">
+          🖤 Internal Dialogues
+        </h1>
+        <Button
+          onClick={() => setDarkMode(!darkMode)}
+          variant="ghost"
+          className="text-lg"
+          aria-label="Toggle Dark Mode"
+        >
+          {darkMode ? "☀️ Light" : "🌙 Dark"}
+        </Button>
+      </header>
+
+      <nav className="flex gap-2 px-4 py-3 bg-marfimAntigo/60 border-b border-lavandaMorta shadow-sm dark:bg-[#222]">
+        {tabs.map((tab) => (
+          <Button
+            key={tab}
+            variant={activeTab === tab ? "default" : "ghost"}
+            onClick={() => setActiveTab(tab)}
+            className="rounded-xl2 text-sm border border-rosaPastel bg-white/80 hover:bg-brancoFloral text-pretoSuave dark:bg-black/40 dark:text-white transition-colors duration-300"
+          >
+            {tab}
+          </Button>
+        ))}
+      </nav>
+
+      <main className="p-6 max-w-4xl mx-auto">
+        {activeTab === "Profile" && (
+          <section>
+            <h2 className="text-2xl font-titulo italic mb-6 text-cinzaNeblina dark:text-rosaPastel select-none">
+              Your Personal Space
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Banner image URL"
+                  value={banner}
+                  onChange={(e) => setBanner(e.target.value)}
+                  className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rosaPastel"
+                />
+                <input
+                  type="text"
+                  placeholder="Avatar image URL"
+                  value={avatar}
+                  onChange={(e) => setAvatar(e.target.value)}
+                  className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rosaPastel"
+                />
+                <input
+                  type="text"
+                  placeholder="Love style (e.g. Hopeless romantic)"
+                  value={loveStyle}
+                  onChange={(e) => setLoveStyle(e.target.value)}
+                  className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rosaPastel"
+                />
+                <input
+                  type="text"
+                  placeholder="Likes"
+                  value={likes}
+                  onChange={(e) => setLikes(e.target.value)}
+                  className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rosaPastel"
+                />
+                <input
+                  type="text"
+                  placeholder="Dislikes"
+                  value={dislikes}
+                  onChange={(e) => setDislikes(e.target.value)}
+                  className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rosaPastel"
+                />
+                <input
+                  type="text"
+                  placeholder="Spotify track/playlist URL"
+                  value={spotify}
+                  onChange={(e) => setSpotify(e.target.value)}
+                  className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rosaPastel"
+                />
+
+                <Button
+                  onClick={saveProfile}
+                  className="mt-4 bg-rosaPastel text-white hover:bg-rosaPastel/90 transition-colors"
+                >
+                  Guardar Perfil
+                </Button>
+              </div>
+
+              <div
+                className="rounded-xl shadow-lg border relative overflow-hidden flex flex-col items-center justify-center"
+                style={{
+                  backgroundImage: banner ? `url(${banner})` : undefined,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  minHeight: "320px",
+                }}
+              >
+                <div className="bg-white/90 dark:bg-black/80 p-6 rounded-xl w-full max-w-sm text-center">
+                  {avatar ? (
+                    <img
+                      src={avatar}
+                      alt="avatar"
+                      className="w-28 h-28 rounded-full border-4 border-white shadow-md mx-auto mb-4"
+                    />
+                  ) : (
+                    <div className="w-28 h-28 rounded-full border-4 border-white shadow-md mx-auto mb-4 bg-gray-300 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-400 select-none">
+                      Sem Avatar
+                    </div>
+                  )}
+                  <p className="text-lg italic text-rosaPastel mb-2 select-text">
+                    💖 {loveStyle || "Estilo de amor não definido"}
+                  </p>
+                  <p className="mb-1 select-text">
+                    <strong>Likes:</strong> {likes || "Nenhum definido"}
+                  </p>
+                  <p className="mb-2 select-text">
+                    <strong>Dislikes:</strong> {dislikes || "Nenhum definido"}
+                  </p>
+
+                  {spotify ? (
+                    <iframe
+                      src={spotify.replace("open.spotify.com", "open.spotify.com/embed")}
+                      width="100%"
+                      height="80"
+                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                      loading="lazy"
+                      className="rounded"
+                      title="Spotify Player"
+                    ></iframe>
+                  ) : (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 select-none">
+                      Nenhuma playlist Spotify adicionada
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Podes adicionar as outras tabs aqui conforme precisares */}
+      </main>
+    </div>
+  );
+}
+
