@@ -144,7 +144,6 @@ export default function InternalDialogues() {
         )}
 
 
-      <main className="p-6 max-w-4xl mx-auto">
         {activeTab === "Profile" && (
           <section>
             <h2 className="text-2xl font-titulo italic mb-6 text-cinzaNeblina dark:text-rosaPastel select-none">
