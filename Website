@@ -1,4 +1,3 @@
-cd "C:\Users\Leonor Araujo\internal-dialogues"
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { db, auth } from "@/lib/firebase";
@@ -10,8 +9,10 @@ import {
   collection,
   query,
   where,
+  orderBy,
 } from "firebase/firestore";
 import { onAuthStateChanged, signInAnonymously } from "firebase/auth";
+import { motion } from "framer-motion";
 
 const tabs = [
   "Home",
@@ -30,7 +31,6 @@ export default function InternalDialogues() {
   const [entries, setEntries] = useState([]);
   const [darkMode, setDarkMode] = useState(false);
 
-  // Profile states
   const [avatar, setAvatar] = useState("");
   const [banner, setBanner] = useState("");
   const [loveStyle, setLoveStyle] = useState("");
@@ -38,7 +38,6 @@ export default function InternalDialogues() {
   const [dislikes, setDislikes] = useState("");
   const [spotify, setSpotify] = useState("");
 
-  // Auth + load entries and profile
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -54,7 +53,11 @@ export default function InternalDialogues() {
   }, []);
 
   async function loadUserEntries(uid) {
-    const q = query(collection(db, "entries"), where("uid", "==", uid));
+    const q = query(
+      collection(db, "entries"),
+      where("uid", "==", uid),
+      orderBy("timestamp", "desc")
+    );
     const querySnapshot = await getDocs(q);
     const data = querySnapshot.docs.map((doc) => doc.data());
     setEntries(data);
@@ -85,11 +88,11 @@ export default function InternalDialogues() {
       dislikes,
       spotify,
     });
-    alert("Perfil guardado com sucesso!");
+    alert("Profile saved successfully!");
   }
 
   async function handleSubmit(text, type) {
-    if (!user) return;
+    if (!user || !text.trim()) return;
     const entry = {
       uid: user.uid,
       type,
@@ -103,15 +106,13 @@ export default function InternalDialogues() {
   }
 
   const theme = darkMode
-    ? "bg-[#1a1a1a] text-[#f4edea]"
-    : "bg-gradient-to-br from-rosaPastel to-brancoFloral text-pretoSuave";
+    ? "bg-gradient-to-br from-[#1a1a1a] via-[#1d1d1d] to-[#141414] text-[#f4edea]"
+    : "bg-gradient-to-br from-rosaPastel to-marfim text-pretoSuave";
 
   return (
-    <div
-      className={`min-h-screen ${theme} font-serif transition-colors duration-500`}
-    >
-      <header className="p-4 bg-white/70 shadow-md flex justify-between items-center border-b border-lavandaMorta dark:bg-black/60">
-        <h1 className="text-3xl font-titulo italic text-cinzaNeblina dark:text-rosaPastel select-none">
+    <div className={`min-h-screen ${theme} font-body transition-colors duration-500`}>
+      <header className="p-4 bg-white/70 shadow-md flex justify-between items-center border-b border-lavanda dark:bg-black/60">
+        <h1 className="text-3xl font-titulo italic text-pretoSuave dark:text-rosaPastel select-none">
           🖤 Internal Dialogues
         </h1>
         <Button
@@ -124,115 +125,137 @@ export default function InternalDialogues() {
         </Button>
       </header>
 
-      <nav className="flex gap-2 px-4 py-3 bg-marfimAntigo/60 border-b border-lavandaMorta shadow-sm dark:bg-[#222]">
+      <nav className="flex gap-2 px-4 py-3 bg-marfim/60 border-b border-lavanda shadow-sm dark:bg-[#222]">
         {tabs.map((tab) => (
           <Button
             key={tab}
             variant={activeTab === tab ? "default" : "ghost"}
             onClick={() => setActiveTab(tab)}
-            className="rounded-xl2 text-sm border border-rosaPastel bg-white/80 hover:bg-brancoFloral text-pretoSuave dark:bg-black/40 dark:text-white transition-colors duration-300"
+            className="rounded-xl text-sm border border-rosaPastel bg-white/80 hover:bg-marfim text-pretoSuave dark:bg-black/40 dark:text-white transition-colors duration-300"
           >
             {tab}
           </Button>
         ))}
       </nav>
- <main className="p-6 max-w-4xl mx-auto">
+
+      <main className="p-6 max-w-4xl mx-auto">
         {activeTab === "Home" && (
           <section className="text-center p-10 text-lg italic text-gray-600 dark:text-gray-400">
             🚧 This website is still under construction. Stay tuned for updates! 🚧
           </section>
         )}
 
+        {activeTab === "Vent to the Void" && (
+          <section>
+            <h2 className="text-2xl font-titulo italic mb-4 text-pretoSuave dark:text-rosaPastel">
+              Vent to the Void
+            </h2>
+            <textarea
+              placeholder="Write what you feel..."
+              value={ventText}
+              onChange={(e) => setVentText(e.target.value)}
+              className="w-full p-4 border rounded shadow-md resize-none h-40 dark:bg-black/20 dark:text-white"
+            />
+            <Button
+              onClick={() => handleSubmit(ventText, "vent")}
+              className="mt-4 bg-rosaPastel text-white hover:bg-rosaPastel/90 rounded-xl px-6 py-2 shadow-md"
+            >
+              Send
+            </Button>
+            <div className="mt-8 space-y-4">
+              {entries
+                .filter((entry) => entry.type === "vent")
+                .map((entry, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="p-6 bg-white/80 dark:bg-[#1a1a1a]/70 border border-rosaPastel rounded-2xl shadow-xl backdrop-blur-sm"
+                  >
+                    <p className="italic text-pretoSuave dark:text-white">{entry.text}</p>
+                    <p className="text-sm text-gray-500 mt-3">
+                      {new Date(entry.timestamp).toLocaleString()}
+                    </p>
+                  </motion.div>
+                ))}
+            </div>
+          </section>
+        )}
+
+        {activeTab === "Midnight Thoughts" && (
+          <section>
+            <h2 className="text-2xl font-titulo italic mb-4 text-pretoSuave dark:text-rosaPastel">
+              Midnight Thoughts
+            </h2>
+            <textarea
+              placeholder="Share your midnight reflections..."
+              value={midnightText}
+              onChange={(e) => setMidnightText(e.target.value)}
+              className="w-full p-4 border rounded shadow-md resize-none h-40 dark:bg-black/20 dark:text-white"
+            />
+            <Button
+              onClick={() => handleSubmit(midnightText, "midnight")}
+              className="mt-4 bg-rosaPastel text-white hover:bg-rosaPastel/90 rounded-xl px-6 py-2 shadow-md"
+            >
+              Save
+            </Button>
+            <div className="mt-8 space-y-4">
+              {entries
+                .filter((entry) => entry.type === "midnight")
+                .map((entry, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="p-6 bg-white/80 dark:bg-[#1a1a1a]/70 border border-rosaPastel rounded-2xl shadow-xl backdrop-blur-sm"
+                  >
+                    <p className="italic text-pretoSuave dark:text-white">{entry.text}</p>
+                    <p className="text-sm text-gray-500 mt-3">
+                      {new Date(entry.timestamp).toLocaleString()}
+                    </p>
+                  </motion.div>
+                ))}
+            </div>
+          </section>
+        )}
 
         {activeTab === "Profile" && (
           <section>
-            <h2 className="text-2xl font-titulo italic mb-6 text-cinzaNeblina dark:text-rosaPastel select-none">
+            <h2 className="text-2xl font-titulo italic mb-6 text-pretoSuave dark:text-rosaPastel">
               Your Personal Space
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="Banner image URL"
-                  value={banner}
-                  onChange={(e) => setBanner(e.target.value)}
-                  className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rosaPastel"
-                />
-                <input
-                  type="text"
-                  placeholder="Avatar image URL"
-                  value={avatar}
-                  onChange={(e) => setAvatar(e.target.value)}
-                  className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rosaPastel"
-                />
-                <input
-                  type="text"
-                  placeholder="Love style (e.g. Hopeless romantic)"
-                  value={loveStyle}
-                  onChange={(e) => setLoveStyle(e.target.value)}
-                  className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rosaPastel"
-                />
-                <input
-                  type="text"
-                  placeholder="Likes"
-                  value={likes}
-                  onChange={(e) => setLikes(e.target.value)}
-                  className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rosaPastel"
-                />
-                <input
-                  type="text"
-                  placeholder="Dislikes"
-                  value={dislikes}
-                  onChange={(e) => setDislikes(e.target.value)}
-                  className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rosaPastel"
-                />
-                <input
-                  type="text"
-                  placeholder="Spotify track/playlist URL"
-                  value={spotify}
-                  onChange={(e) => setSpotify(e.target.value)}
-                  className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rosaPastel"
-                />
-
-                <Button
-                  onClick={saveProfile}
-                  className="mt-4 bg-rosaPastel text-white hover:bg-rosaPastel/90 transition-colors"
-                >
-                  Guardar Perfil
+                <input type="text" placeholder="Banner image URL" value={banner} onChange={(e) => setBanner(e.target.value)} className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rosaPastel" />
+                <input type="text" placeholder="Avatar image URL" value={avatar} onChange={(e) => setAvatar(e.target.value)} className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rosaPastel" />
+                <input type="text" placeholder="Love style (e.g. Hopeless romantic)" value={loveStyle} onChange={(e) => setLoveStyle(e.target.value)} className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rosaPastel" />
+                <input type="text" placeholder="Likes" value={likes} onChange={(e) => setLikes(e.target.value)} className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rosaPastel" />
+                <input type="text" placeholder="Dislikes" value={dislikes} onChange={(e) => setDislikes(e.target.value)} className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rosaPastel" />
+                <input type="text" placeholder="Spotify track/playlist URL" value={spotify} onChange={(e) => setSpotify(e.target.value)} className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rosaPastel" />
+                <Button onClick={saveProfile} className="mt-4 bg-rosaPastel text-white hover:bg-rosaPastel/90 transition-colors">
+                  Save Profile
                 </Button>
               </div>
-
-              <div
-                className="rounded-xl shadow-lg border relative overflow-hidden flex flex-col items-center justify-center"
-                style={{
-                  backgroundImage: banner ? `url(${banner})` : undefined,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  minHeight: "320px",
-                }}
-              >
+              <div className="rounded-xl shadow-lg border relative overflow-hidden flex flex-col items-center justify-center" style={{ backgroundImage: banner ? `url(${banner})` : undefined, backgroundSize: "cover", backgroundPosition: "center", minHeight: "320px" }}>
                 <div className="bg-white/90 dark:bg-black/80 p-6 rounded-xl w-full max-w-sm text-center">
                   {avatar ? (
-                    <img
-                      src={avatar}
-                      alt="avatar"
-                      className="w-28 h-28 rounded-full border-4 border-white shadow-md mx-auto mb-4"
-                    />
+                    <img src={avatar} alt="avatar" className="w-28 h-28 rounded-full border-4 border-white shadow-md mx-auto mb-4" />
                   ) : (
                     <div className="w-28 h-28 rounded-full border-4 border-white shadow-md mx-auto mb-4 bg-gray-300 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-400 select-none">
-                      Sem Avatar
+                      No Avatar
                     </div>
                   )}
                   <p className="text-lg italic text-rosaPastel mb-2 select-text">
-                    💖 {loveStyle || "Estilo de amor não definido"}
+                    💖 {loveStyle || "No love style defined"}
                   </p>
                   <p className="mb-1 select-text">
-                    <strong>Likes:</strong> {likes || "Nenhum definido"}
+                    <strong>Likes:</strong> {likes || "Not defined"}
                   </p>
                   <p className="mb-2 select-text">
-                    <strong>Dislikes:</strong> {dislikes || "Nenhum definido"}
+                    <strong>Dislikes:</strong> {dislikes || "Not defined"}
                   </p>
-
                   {spotify ? (
                     <iframe
                       src={spotify.replace("open.spotify.com", "open.spotify.com/embed")}
@@ -245,7 +268,7 @@ export default function InternalDialogues() {
                     ></iframe>
                   ) : (
                     <p className="text-sm text-gray-500 dark:text-gray-400 select-none">
-                      Nenhuma playlist Spotify adicionada
+                      No Spotify playlist added
                     </p>
                   )}
                 </div>
@@ -253,10 +276,9 @@ export default function InternalDialogues() {
             </div>
           </section>
         )}
-
-        {/* Podes adicionar as outras tabs aqui conforme precisares */}
       </main>
     </div>
   );
 }
+
 
