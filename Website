@@ -136,6 +136,13 @@ export default function InternalDialogues() {
           </Button>
         ))}
       </nav>
+ <main className="p-6 max-w-4xl mx-auto">
+        {activeTab === "Home" && (
+          <section className="text-center p-10 text-lg italic text-gray-600 dark:text-gray-400">
+            🚧 This website is still under construction. Stay tuned for updates! 🚧
+          </section>
+        )}
+
 
       <main className="p-6 max-w-4xl mx-auto">
         {activeTab === "Profile" && (
